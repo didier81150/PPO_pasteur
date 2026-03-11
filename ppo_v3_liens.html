@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPO - Collège Louis Pasteur</title>
+<style>
+:root{--navy:#0d1b3e;--blue:#1a4fa0;--accent:#e8a020;--light:#f0f4fc;--white:#fff;--text:#1c2340;--muted:#6b7aa1;--border:#dde4f0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:var(--light);color:var(--text);min-height:100vh}
+header{background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);color:#fff;padding:36px 40px 28px;position:relative;overflow:hidden}
+header::before{content:'';position:absolute;top:-60px;right:-60px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.04)}
+.header-tag{display:inline-block;background:var(--accent);color:var(--navy);font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:14px}
+header h1{font-family:Arial,sans-serif;font-weight:900;font-size:1.9rem;line-height:1.2;margin-bottom:8px;position:relative;z-index:1}
+header p{font-size:.95rem;opacity:.75;position:relative;z-index:1}
+nav{background:var(--navy);display:flex;gap:2px;padding:0 40px;border-bottom:3px solid var(--accent);overflow-x:auto}
+nav a{color:rgba(255,255,255,.6);text-decoration:none;font-family:Arial,sans-serif;font-weight:700;font-size:13px;letter-spacing:.4px;padding:13px 16px;display:block;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-3px;transition:color .2s}
+nav a:hover,nav a.active{color:var(--accent);border-bottom-color:var(--accent)}
+main{max-width:1200px;margin:0 auto;padding:28px}
+.section{display:none}.section.active{display:block}
+.section-header{margin-bottom:26px}
+.section-header h2{font-family:Arial,sans-serif;font-weight:900;font-size:1.4rem;color:var(--navy);line-height:1.3}
+.section-header p{color:var(--muted);font-size:.88rem;margin-top:5px}
+.divider{width:44px;height:4px;background:var(--accent);border-radius:2px;margin:10px 0 0}
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:22px;margin-bottom:18px;box-shadow:0 2px 10px rgba(13,27,62,.06)}
+.card-title{font-family:Arial,sans-serif;font-weight:700;font-size:.95rem;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.niveau{display:inline-block;background:var(--navy);color:#fff;font-family:Arial,sans-serif;font-weight:700;font-size:12px;padding:3px 10px;border-radius:20px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+thead th{background:var(--navy);color:#fff;font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.4px;text-transform:uppercase;padding:11px 13px;text-align:left}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:11px 13px;vertical-align:top;line-height:1.5}
+tbody tr:nth-child(even) td{background:#f8faff}
+tbody tr:hover td{background:#eef3fc}
+.empty{color:var(--muted);font-style:italic}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.kpi{background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px;text-align:center;box-shadow:0 2px 10px rgba(13,27,62,.06)}
+.kpi-val{font-family:Arial,sans-serif;font-weight:900;font-size:1.8rem;color:var(--blue);line-height:1;margin-bottom:5px}
+.kpi-lbl{font-size:.78rem;color:var(--muted);line-height:1.3}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+@media(max-width:720px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:20px;box-shadow:0 2px 10px rgba(13,27,62,.06)}
+.chart-card h3{font-family:Arial,sans-serif;font-weight:700;font-size:.85rem;color:var(--navy);margin-bottom:14px}
+.chart-card-full{background:#fff;border-radius:12px;border:1px solid var(--border);padding:20px;box-shadow:0 2px 10px rgba(13,27,62,.06);margin-bottom:18px}
+.chart-card-full h3{font-family:Arial,sans-serif;font-weight:700;font-size:.85rem;color:var(--navy);margin-bottom:14px}
+.sub-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.sub-tab{padding:7px 15px;border-radius:20px;background:#fff;border:1.5px solid var(--border);font-family:Arial,sans-serif;font-weight:700;font-size:12px;cursor:pointer;color:var(--muted);transition:all .2s}
+.sub-tab:hover{border-color:var(--blue);color:var(--blue)}
+.sub-tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.sub-section{display:none}.sub-section.active{display:block}
+.data-wrap{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-bottom:18px;box-shadow:0 2px 10px rgba(13,27,62,.06)}
+.data-wrap h3{font-family:Arial,sans-serif;font-weight:700;font-size:.85rem;color:var(--navy);padding:16px 18px 0;margin-bottom:12px}
+.data-wrap .table-wrap{padding-bottom:4px}
+.data-wrap table thead th{background:var(--blue)}
+canvas{display:block;width:100%!important}
+footer{text-align:center;padding:22px;font-size:.78rem;color:var(--muted);border-top:1px solid var(--border);margin-top:18px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.75rem;color:var(--text)}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+/* Contexte narratif */
+.axe-context{background:linear-gradient(135deg,#f0f4fc 0%,#e8f0fb 100%);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;padding:18px 22px;margin-bottom:22px;font-size:.9rem;line-height:1.7;color:var(--text)}
+.axe-context strong{color:var(--navy)}
+/* Bloc info établissement */
+.etab-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px}
+.etab-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px 20px;box-shadow:0 2px 10px rgba(13,27,62,.06);display:flex;align-items:flex-start;gap:14px}
+.etab-icon{font-size:1.6rem;line-height:1}
+.etab-info{}
+.etab-val{font-family:Arial,sans-serif;font-weight:900;font-size:1.4rem;color:var(--blue);line-height:1.1}
+.etab-lbl{font-size:.78rem;color:var(--muted);margin-top:3px}
+/* Bloc questionnaire CESCE */
+.cesce-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+@media(max-width:600px){.cesce-grid{grid-template-columns:1fr}}
+.cesce-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px;box-shadow:0 2px 10px rgba(13,27,62,.06)}
+.cesce-card h4{font-family:Arial,sans-serif;font-weight:700;font-size:.82rem;color:var(--navy);margin-bottom:12px;line-height:1.4}
+.cesce-bar-wrap{display:flex;flex-direction:column;gap:7px}
+.cesce-bar-row{display:flex;align-items:center;gap:10px;font-size:.8rem}
+.cesce-bar-label{width:70px;color:var(--muted);text-align:right;flex-shrink:0}
+.cesce-bar-bg{flex:1;background:#eef3fc;border-radius:20px;height:18px;overflow:hidden}
+.cesce-bar-fill{height:100%;border-radius:20px;display:flex;align-items:center;padding-left:8px;color:#fff;font-weight:700;font-size:.72rem}
+/* Badge REP */
+.rep-badge{display:inline-block;background:#c0392b;color:#fff;font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:1px;padding:3px 10px;border-radius:20px;margin-left:10px;vertical-align:middle}
+/* Indicateur saillant */
+.highlight-box{background:#fff8e6;border:1.5px solid var(--accent);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:.88rem;line-height:1.6;color:var(--text)}
+.highlight-box strong{color:var(--navy)}
+/* Liens institutionnels */
+.liens-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-bottom:24px}
+.lien-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 2px 10px rgba(13,27,62,.06);text-decoration:none;color:var(--text);display:flex;align-items:flex-start;gap:14px;transition:all .22s}
+.lien-card:hover{border-color:var(--blue);box-shadow:0 6px 20px rgba(26,79,160,.13);transform:translateY(-2px)}
+.lien-icon{font-size:1.9rem;flex-shrink:0;line-height:1}
+.lien-name{font-family:Arial,sans-serif;font-weight:700;font-size:.9rem;color:var(--navy);margin-bottom:4px}
+.lien-desc{font-size:.76rem;color:var(--muted);line-height:1.45;margin-bottom:5px}
+.lien-url{font-size:.71rem;color:var(--blue);font-family:Arial,sans-serif}
+.liens-category{font-family:Arial,sans-serif;font-weight:900;font-size:.95rem;color:var(--navy);margin:22px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+.liens-category:first-child{margin-top:0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-tag">2026 — 2028</div>
+  <h1>Projet Pédagogique et d'Orientation</h1>
+  <p>Collège Louis Pasteur — PPO</p>
+</header>
+
+<nav id="mainNav">
+  <a href="#" onclick="showSection('accueil',this,event)" class="active">Accueil</a>
+  <a href="#" onclick="showSection('axe1',this,event)">Axe 1</a>
+  <a href="#" onclick="showSection('axe2',this,event)">Axe 2</a>
+  <a href="#" onclick="showSection('axe3',this,event)">Axe 3</a>
+  <a href="#" onclick="showSection('donnees',this,event)">Données &amp; Indicateurs</a>
+  <a href="#" onclick="showSection('liens',this,event)">Liens utiles</a>
+</nav>
+
+<main>
+
+<!-- ACCUEIL -->
+<div id="accueil" class="section active">
+  <div class="section-header">
+    <h2>Plan Pluriannuel d'Éducation à l'Orientation — Collège Louis Pasteur <span class="rep-badge">REP</span></h2>
+    <div class="divider"></div>
+    <p>PPO 2026-2028 — Données issues du fichier PPO_recensement_des_actions.xlsx et du document PPO_clg_PASTEUR_2026-28.docx</p>
+  </div>
+
+  <!-- Présentation générale -->
+  <div class="axe-context">
+    Le plan pluriannuel a pour objectif de renforcer l'accompagnement à tous les niveaux de la scolarité pour permettre aux élèves d'élaborer progressivement leur projet d'avenir : <strong>en formalisant un programme progressif d'actions sur des heures dédiées</strong>, en assurant le suivi et la coordination des différentes actions menées par les professeurs principaux, et en établissant <strong>un programme souple et évolutif en cohérence avec le projet d'établissement</strong>.
+  </div>
+
+  <!-- Contexte établissement -->
+  <div class="section-header" style="margin-bottom:14px"><h2 style="font-size:1rem">L'établissement en chiffres</h2></div>
+  <div class="etab-grid">
+    <div class="etab-card"><div class="etab-icon">🏫</div><div class="etab-info"><div class="etab-val">755</div><div class="etab-lbl">élèves scolarisés dont 62 en SEGPA</div></div></div>
+    <div class="etab-card"><div class="etab-icon">👩‍🏫</div><div class="etab-info"><div class="etab-val">~60</div><div class="etab-lbl">enseignants + ~40 personnels d'encadrement</div></div></div>
+    <div class="etab-card"><div class="etab-icon">🔨</div><div class="etab-info"><div class="etab-val">2023–2026</div><div class="etab-lbl">Restructuration complète des locaux (livraison avril 2026)</div></div></div>
+    <div class="etab-card"><div class="etab-icon">👧</div><div class="etab-info"><div class="etab-val">48,2%</div><div class="etab-lbl">de filles, toutes formations confondues (2025)</div></div></div>
+    <div class="etab-card"><div class="etab-icon">📊</div><div class="etab-info"><div class="etab-val">89,9</div><div class="etab-lbl">IPS moyen — en baisse depuis 4 ans</div></div></div>
+    <div class="etab-card"><div class="etab-icon">⚠️</div><div class="etab-info"><div class="etab-val">50,6%</div><div class="etab-lbl">d'élèves de milieu social défavorisé (2025)</div></div></div>
+  </div>
+
+  <!-- Indicateurs saillants -->
+  <div class="highlight-box">
+    <strong>Indicateurs saillants 2025 :</strong> 56% des élèves passent en 2nde GT (dont 64,5% des filles vs 48,2% des garçons) — 19,5% en 2nde PRO — <strong>19% des élèves non affectés au premier tour</strong> d'orientation, interrogeant la connaissance réelle des filières professionnelles — 8,4% des élèves de 3ème ont un retard scolaire d'un an — Écart PCS notable : 88,2% des enfants de cadres en 2nde GT contre 46,7% pour les enfants d'ouvriers.
+  </div>
+
+  <!-- Questionnaire CESCE -->
+  <div class="section-header" style="margin-bottom:14px"><h2 style="font-size:1rem">Questionnaire CESCE 2025 — 525 élèves interrogés</h2></div>
+  <div class="cesce-grid">
+    <div class="cesce-card">
+      <h4>« Es-tu inquiet(e) pour l'avenir ? »</h4>
+      <div class="cesce-bar-wrap">
+        <div class="cesce-bar-row"><span class="cesce-bar-label">Parfois</span><div class="cesce-bar-bg"><div class="cesce-bar-fill" style="width:40%;background:#e8a020">40%</div></div></div>
+        <div class="cesce-bar-row"><span class="cesce-bar-label">Souvent</span><div class="cesce-bar-bg"><div class="cesce-bar-fill" style="width:28%;background:#c0392b">28%</div></div></div>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:10px">Soit <strong style="color:var(--navy)">68%</strong> des élèves déclarent une inquiétude pour leur avenir</p>
+    </div>
+    <div class="cesce-card">
+      <h4>« Es-tu d'accord que tous les métiers ne sont pas mixtes ? »</h4>
+      <div class="cesce-bar-wrap">
+        <div class="cesce-bar-row"><span class="cesce-bar-label">Oui</span><div class="cesce-bar-bg"><div class="cesce-bar-fill" style="width:21%;background:#c0392b">21%</div></div></div>
+        <div class="cesce-bar-row"><span class="cesce-bar-label">Parfois</span><div class="cesce-bar-bg"><div class="cesce-bar-fill" style="width:17%;background:#e8a020">17%</div></div></div>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:10px">Soit <strong style="color:var(--navy)">38%</strong> des élèves adhèrent à des représentations genrées des métiers</p>
+    </div>
+  </div>
+
+  <!-- Graphiques -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Répartition des élèves par lycée d'affectation</h3>
+      <canvas id="cLycees" height="260"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Milieu social des élèves — 2025</h3>
+      <canvas id="cMilieu" height="260"></canvas>
+      <div class="legend" id="legMilieuSocial"></div>
+    </div>
+  </div>
+  <div class="chart-card-full">
+    <h3>Passage post-3ème par filière (%) — 2022 à 2025</h3>
+    <canvas id="cPost3Accueil" height="220"></canvas>
+    <div class="legend" id="legPost3Accueil"></div>
+  </div>
+</div>
+
+<!-- AXE 1 -->
+<div id="axe1" class="section">
+  <div class="section-header">
+    <h2>Axe 1 : Favoriser la découverte de la diversité du monde économique et professionnel</h2>
+    <div class="divider"></div>
+  </div>
+  <div class="axe-context">
+    Le collège, situé en réseau d'éducation prioritaire et marqué par une forte proportion d'élèves issus de milieux défavorisés (50,6%), doit permettre à chaque élève de s'ouvrir à la diversité des métiers et des parcours possibles. Les indicateurs montrent une orientation encore très genrée (<strong>64,5% des filles en 2nde GT contre 48,2% des garçons</strong>) et une méconnaissance des filières professionnelles (20% des élèves de 2nde pro ne poursuivent pas en 1ère pro). <strong>L'enjeu est de déconstruire les stéréotypes et d'élargir les horizons</strong> : en organisant des rencontres avec des professionnels de secteurs variés, en valorisant les parcours mixtes, et en intégrant la découverte des métiers dès la 6ème.
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">6ème</span> Lutter contre les stéréotypes de genre</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="2">Lutter contre les stéréotypes de genre</td><td>Exposition sur les représentations des « métiers genrés »</td><td>Professeurs documentalistes, tous les enseignants et AED</td><td>Toute l'année</td><td class="empty">—</td></tr>
+        <tr><td>Interventions spécifiques dans le cadre du programme EVARS</td><td>Enseignants et partenaires de l'équipe EVARS</td><td class="empty">—</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">5ème</span> Découvrir la diversité des métiers</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="2">Découvrir la diversité des métiers</td><td>Exposé en classe : l'élève fait l'interview d'un proche (famille, ami, voisin) et présente son métier en classe</td><td>Élève et ses connaissances</td><td>Toute l'année</td><td class="empty">—</td></tr>
+        <tr><td>Présentation du métier de tout intervenant susceptible d'être accueilli en classe</td><td>Tous les adultes du collège</td><td class="empty">—</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">4ème</span> Remotivation et connaissance des métiers</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Remotivation de certains élèves décrocheurs</td><td>Courts stages en entreprise</td><td>Entreprises extérieures, PP, CPE, parents</td><td>Plutôt 2nde partie de l'année</td><td class="empty">—</td></tr>
+        <tr><td>Connaissance des métiers et rencontres de professionnels</td><td>Participation au forum des métiers du bassin</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+        <tr><td>Présentation de modèles inspirants</td><td>Cordées de la réussite</td><td>Écoles d'ingénieurs, universités</td><td>Toute l'année</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">3ème</span> Connaissance des parcours et des formations</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Meilleure connaissance des parcours de formation</td><td>Chaque élève choisit un métier et présente le ou les parcours de formation qui permettent d'y accéder</td><td>Élèves</td><td>Au cours de l'année</td><td class="empty">—</td></tr>
+        <tr><td>Mieux connaître les formations professionnelles</td><td>Mini stages en LP</td><td>CPE + PP</td><td>En fonction des périodes d'accueil des lycées</td><td class="empty">—</td></tr>
+        <tr><td>Découvrir une ou plusieurs activités professionnelles</td><td>Stages d'observation d'une semaine en entreprise</td><td>Élèves et adultes du collège</td><td>Date fixée chaque année</td><td class="empty">—</td></tr>
+        <tr><td class="empty">—</td><td>Création d'une banque de données pour répertorier des lieux de stages</td><td>Familles, partenaires professionnels, CCI, plateforme avenir</td><td>Tout au long de l'année</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- AXE 2 -->
+<div id="axe2" class="section">
+  <div class="section-header">
+    <h2>Axe 2 : Développer la mobilité des élèves et prévenir leur crainte de l'inconnu</h2>
+    <div class="divider"></div>
+  </div>
+  <div class="axe-context">
+    La restructuration récente du collège crée un environnement propice à l'innovation pédagogique. Pourtant, <strong>40% des élèves déclarent être parfois ou souvent inquiets pour l'avenir</strong>, et <strong>19% des élèves ne sont pas affectés au premier tour d'orientation</strong>. La mobilité, physique ou intellectuelle, est un levier clé pour briser les déterminismes sociaux et territoriaux : en consolidant les sorties culturelles, les stages et mini-stages, en organisant des visites d'entreprises et des échanges avec d'autres établissements, en favorisant une meilleure connaissance des réseaux de transport, nous aiderons les élèves à se projeter au-delà de leur environnement immédiat. Cela permettra aussi de lutter contre les représentations erronées de la voie professionnelle, encore parfois perçue comme une voie par défaut.
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">6ème</span></div>
+    <p class="empty" style="font-size:.88rem">Aucune action renseignée dans le fichier source pour ce niveau.</p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">5ème</span> Se repérer dans un nouvel environnement</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Apprendre à se repérer dans un nouvel environnement urbain</td><td>Course d'orientation en ville, ailleurs qu'à Graulhet / Lavaur</td><td>Enseignant d'EPS, office du tourisme</td><td>En fonction des activités EPS et des cycles EPS</td><td>Évaluation par les enseignants des compétences mises en œuvre et saisie sur le bulletin semestriel</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">4ème</span> Visites de lycées en duo parents-élèves</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Découvrir, avec ses parents, que certains lycées ne sont pas si éloignés et permettre une réelle connaissance des filières</td><td>Organiser des visites de lycées professionnels et agricoles en duo parents-élèves pour des visites de LP</td><td>CPE et PP, directeur SEGPA, DDFPT et proviseurs</td><td>À déterminer en fonction des lycées d'accueil</td><td>Questionnaire aux élèves et parents ayant participé</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">3ème</span> Mobilité, transports et internat</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Connaître le réseau de transports desservant Graulhet</td><td>Organiser des sorties / visites en utilisant les transports en commun réguliers vers Albi, Toulouse, Castres</td><td>Professeurs organisateurs de sorties qui pourront associer des élèves à cette organisation</td><td>Toute l'année</td><td class="empty">—</td></tr>
+        <tr><td>Découvrir ce que peut être la vie d'un élève interne, démystifier l'internat</td><td>Découvrir une nuit à l'internat</td><td>CPE, équipes de direction, PP, parents</td><td>Plutôt entre janvier et mars, à déterminer en fonction des lycées d'accueil</td><td class="empty">—</td></tr>
+        <tr><td>Se rendre dans un autre établissement par ses propres moyens</td><td>Ministages en lycées</td><td>CPE et PP</td><td>En fonction des périodes d'accueil des lycées</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- AXE 3 -->
+<div id="axe3" class="section">
+  <div class="section-header">
+    <h2>Axe 3 : Ambition, persévérance et prévention du décrochage</h2>
+    <div class="divider"></div>
+  </div>
+  <div class="axe-context">
+    Avec un taux de retard scolaire non négligeable (<strong>8,4% en 3ème</strong>) et des disparités fortes selon les PCS (<strong>88,2% des enfants de cadres en 2nde GT contre 46,7% pour les enfants d'ouvriers</strong>), <strong>l'ambition doit être portée collectivement</strong>. Il faut formaliser un accompagnement personnalisé, valoriser avec détermination les réussites et impliquer les familles pour asseoir la persévérance scolaire quel que soit le niveau des élèves. L'articulation entre les heures dédiées à l'orientation, le suivi par les professeurs principaux et la coordination de l'équipe éducative permettra de repérer précocement les signes de décrochage. L'objectif est de faire de l'orientation un levier d'égalité des chances, en donnant à chaque élève les clés pour construire un projet réaliste, ambitieux et motivant.
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">6ème</span> Découverte de soi et des métiers</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Découverte de soi et des métiers, recherches personnelles</td><td>Quiz Onisep, personnalité, métiers — pour créer un lien AED Référent et classe. L'AED et le PP pourraient présenter leurs parcours. La Psy EN vient se présenter et peut commencer à recevoir des élèves</td><td>CDI, PP, AED, référent, COP</td><td>Novembre / Mars</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">5ème</span> Découverte du monde du travail via les pairs</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Découverte du monde du travail via les pairs</td><td>Petit exposé pour présenter le métier d'un membre de la famille ou d'un proche</td><td>PP</td><td>Février</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">4ème</span> Entreprises, filières d'excellence et modèles inspirants</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Découverte des entreprises</td><td>Visites de sites, en particulier industriels</td><td>Enseignants, Directeur SEGPA, CPE</td><td class="empty">—</td><td class="empty">—</td></tr>
+        <tr><td>Meilleure connaissance des formations et des filières d'excellence</td><td>Présentation des formations aux métiers d'art et du compagnonnage</td><td>Intervention de formateurs de ces filières</td><td class="empty">—</td><td class="empty">—</td></tr>
+        <tr><td>Présentation de modèles inspirants</td><td>Cordées de la réussite</td><td>Écoles d'ingénieurs, universités</td><td>Toute l'année</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="niveau">3ème</span> Filières d'excellence et ancrage dans le réel</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Objectifs visés</th><th>Actions</th><th>Personnes ressources / Partenaires</th><th>Période</th><th>Évaluation / Perspectives</th></tr></thead>
+      <tbody>
+        <tr><td>Découverte des entreprises</td><td>Visites de sites, en particulier industriels</td><td>Enseignants, Directeur SEGPA, CPE</td><td class="empty">—</td><td class="empty">—</td></tr>
+        <tr><td>Mieux comprendre les enjeux du lycée</td><td>Intervention dans les classes d'anciens élèves maintenant scolarisés en classe de 1ère</td><td>Anciens élèves, professeurs, proviseurs des lycées et lycées professionnels</td><td class="empty">—</td><td class="empty">—</td></tr>
+        <tr><td>Approfondir la connaissance des filières d'excellence</td><td>Présentation des formations Bachibac, Abibac…</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+        <tr><td class="empty">—</td><td>Présentation de sections Euro dans les lycées de secteur</td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+        <tr><td class="empty">—</td><td>Cordées de la réussite</td><td>Écoles d'ingénieurs, universités</td><td>Toute l'année</td><td class="empty">—</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- DONNÉES -->
+<div id="donnees" class="section">
+  <div class="section-header">
+    <h2>Données &amp; Indicateurs</h2>
+    <div class="divider"></div>
+    <p>Toutes les données issues du fichier PPO_recensement_des_actions.xlsx</p>
+  </div>
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="showSub('lycees',this)">Lycées d'affectation</button>
+    <button class="sub-tab" onclick="showSub('profil',this)">Profil établissement</button>
+    <button class="sub-tab" onclick="showSub('parcours',this)">Parcours scolaires</button>
+    <button class="sub-tab" onclick="showSub('post3',this)">Orientation post-3ème</button>
+    <button class="sub-tab" onclick="showSub('dnb',this)">DNB</button>
+  </div>
+
+  <!-- LYCEES -->
+  <div id="lycees" class="sub-section active">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Nombre d'élèves par lycée d'affectation</h3>
+        <canvas id="cLyceesD" height="280"></canvas>
+      </div>
+      <div class="data-wrap" style="background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 10px rgba(13,27,62,.06)">
+        <h3>Tableau détaillé</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Établissement</th><th>Nb élèves</th></tr></thead>
+          <tbody>
+            <tr><td>LP LE SIDOBRE</td><td>3</td></tr>
+            <tr><td>LP ANNE VEAUTE LYCEE</td><td>4</td></tr>
+            <tr><td>LPO BORDE BASSE</td><td>3</td></tr>
+            <tr><td>LGT GENERAL LAS CASES</td><td>14</td></tr>
+            <tr><td>LPO DOCTEUR CLEMENT DE PEMILLE</td><td>69</td></tr>
+            <tr><td>LGT VICTOR HUGO</td><td>9</td></tr>
+            <tr><td>LP TOULOUSE LAUTREC</td><td>4</td></tr>
+            <tr><td>LGT LAPEROUSE</td><td>3</td></tr>
+            <tr><td>LPO LOUIS RASCOL</td><td>5</td></tr>
+            <tr><td>LYCEE PRIVE SAINTE CECILE</td><td>3</td></tr>
+            <tr><td>LPO JEAN JAURES</td><td>2</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFIL -->
+  <div id="profil" class="sub-section">
+    <div class="charts-grid">
+      <div class="chart-card"><h3>% de filles dans l'établissement (2022–2025)</h3><canvas id="cFilles" height="240"></canvas><div class="legend" id="legFilles"></div></div>
+      <div class="chart-card"><h3>IPS de l'établissement (2022–2025)</h3><canvas id="cIPS" height="240"></canvas><div class="legend" id="legIPS"></div></div>
+    </div>
+    <div class="chart-card-full"><h3>Milieu social des élèves — évolution 2022 à 2025 (%)</h3><canvas id="cMilieuEvol" height="220"></canvas><div class="legend" id="legMilieuEvol"></div></div>
+    <div class="data-wrap"><h3>% de PCS renseignées (2nd degré)</h3><div class="table-wrap"><table>
+      <thead><tr><th>Modalité</th><th>2022</th><th>2023</th><th>2024</th><th>2025</th></tr></thead>
+      <tbody>
+        <tr><td>Aucune PCS renseignée</td><td>2,3</td><td>3,3</td><td>5,3</td><td>4,0</td></tr>
+        <tr><td>Une seule PCS renseignée</td><td>13,8</td><td>16,1</td><td>17,2</td><td>18,2</td></tr>
+        <tr><td>Deux PCS renseignées</td><td>83,9</td><td>80,6</td><td>77,5</td><td>77,8</td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- PARCOURS -->
+  <div id="parcours" class="sub-section">
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Taux de redoublement par niveau (2022–2025)</h3><canvas id="cRedoub" height="240"></canvas><div class="legend" id="legRedoub"></div></div>
+      <div class="chart-card"><h3>Taux de passage entre niveaux (2022–2025)</h3><canvas id="cPassage" height="240"></canvas><div class="legend" id="legPassage"></div></div>
+    </div>
+    <div class="data-wrap"><h3>Retard à l'entrée en 6ème (%)</h3><div class="table-wrap"><table>
+      <thead><tr><th>Modalité</th><th>2022</th><th>2023</th><th>2024</th><th>2025</th></tr></thead>
+      <tbody>
+        <tr><td>Élèves en avance</td><td>2,1</td><td>0</td><td>2,9</td><td>5,0</td></tr>
+        <tr><td>Élèves à l'heure</td><td>95,1</td><td>94,9</td><td>93,7</td><td>90,6</td></tr>
+        <tr><td>Élèves en retard 1 an</td><td>2,8</td><td>5,1</td><td>3,4</td><td>4,4</td></tr>
+        <tr><td>Élèves en retard 2 ans et +</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+      </tbody>
+    </table></div></div>
+    <div class="data-wrap"><h3>% d'élèves en retard d'un an et plus en 3ème</h3><div class="table-wrap"><table>
+      <thead><tr><th>Indicateur</th><th>2022</th><th>2023</th><th>2024</th><th>2025</th></tr></thead>
+      <tbody><tr><td>% d'élèves en retard</td><td>7,0</td><td>9,9</td><td>14,5</td><td>8,4</td></tr></tbody>
+    </table></div></div>
+  </div>
+
+  <!-- POST-3ème -->
+  <div id="post3" class="sub-section">
+    <div class="chart-card-full"><h3>% de passage post-3ème par filière (2022–2025)</h3><canvas id="cPost3D" height="240"></canvas><div class="legend" id="legPost3D"></div></div>
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Passage 2nde GT selon le sexe (Éduc.)</h3><canvas id="cGTSexe" height="240"></canvas><div class="legend" id="legGTSexe"></div></div>
+      <div class="chart-card"><h3>Passage 2nde PRO selon le sexe (Éduc.)</h3><canvas id="cPROSexe" height="240"></canvas><div class="legend" id="legPROSexe"></div></div>
+    </div>
+    <div class="data-wrap"><h3>Passage post-3ème selon la PCS — 2nde GT Éducation (%)</h3><div class="table-wrap"><table>
+      <thead><tr><th>PCS</th><th>2022</th><th>2023</th><th>2024</th><th>2025</th></tr></thead>
+      <tbody>
+        <tr><td>Cadres sup. et enseignants</td><td>74,2</td><td>83,3</td><td>81,5</td><td>88,2</td></tr>
+        <tr><td>Ouvriers et inactifs</td><td>46,3</td><td>46,9</td><td>37,5</td><td>46,7</td></tr>
+      </tbody>
+    </table></div></div>
+    <div class="data-wrap"><h3>Devenir des 3ème en fin de 2nde GT (%)</h3><div class="table-wrap"><table>
+      <thead><tr><th>Orientation</th><th>2022</th><th>2023</th><th>2024</th></tr></thead>
+      <tbody>
+        <tr><td>1ère Générale</td><td>55,9</td><td>60,4</td><td>68,1</td></tr>
+        <tr><td>1ère STMG</td><td>—</td><td>—</td><td>16,0</td></tr>
+        <tr><td>1ère STI2D</td><td>—</td><td>—</td><td>8,5</td></tr>
+        <tr><td>1ère ST2S</td><td>—</td><td>—</td><td>3,2</td></tr>
+        <tr><td>1ère Technologique (jusqu'en 2023)</td><td>28,0</td><td>30,8</td><td>—</td></tr>
+        <tr><td>Réorientation voie PRO</td><td>6,8</td><td>4,4</td><td>1,1</td></tr>
+        <tr><td>Redoublement</td><td>9,3</td><td>2,2</td><td>1,1</td></tr>
+        <tr><td>Autres situations</td><td>0</td><td>2,2</td><td>2,1</td></tr>
+      </tbody>
+    </table></div></div>
+    <div class="data-wrap"><h3>Devenir des 3ème en fin de 2nde Pro (%)</h3><div class="table-wrap"><table>
+      <thead><tr><th>Orientation</th><th>2022</th><th>2023</th><th>2024</th></tr></thead>
+      <tbody>
+        <tr><td>1ère PRO</td><td>89,5</td><td>88,2</td><td>80,0</td></tr>
+        <tr><td>2ème année de CAP</td><td>0</td><td>0</td><td>5,7</td></tr>
+        <tr><td>Redoublement</td><td>0</td><td>0</td><td>2,9</td></tr>
+        <tr><td>Autres situations</td><td>10,5</td><td>11,8</td><td>11,4</td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+
+  <!-- DNB -->
+  <div id="dnb" class="sub-section">
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Taux de réussite brut au DNB (%)</h3><canvas id="cDNBTaux" height="240"></canvas><div class="legend" id="legDNBTaux"></div></div>
+      <div class="chart-card"><h3>Note moyenne à l'écrit — Français &amp; Maths</h3><canvas id="cDNBNotes" height="240"></canvas><div class="legend" id="legDNBNotes"></div></div>
+    </div>
+    <div class="chart-card-full"><h3>Distribution de la note à l'écrit au DNB (%)</h3><canvas id="cDNBDistrib" height="220"></canvas><div class="legend" id="legDNBDistrib"></div></div>
+    <div class="data-wrap"><h3>Notes à l'écrit au DNB selon le sexe</h3><div class="table-wrap"><table>
+      <thead><tr><th>Sexe</th><th>2022</th><th>2023</th><th>2024</th></tr></thead>
+      <tbody>
+        <tr><td>Filles</td><td>9,0</td><td>11,2</td><td>10,3</td></tr>
+        <tr><td>Garçons</td><td>9,6</td><td>11,0</td><td>9,8</td></tr>
+      </tbody>
+    </table></div></div>
+    <div class="data-wrap"><h3>Notes Français / Maths selon le sexe (2023–2024)</h3><div class="table-wrap"><table>
+      <thead><tr><th>Matière / Sexe</th><th>2023</th><th>2024</th></tr></thead>
+      <tbody>
+        <tr><td>Français — Filles</td><td>10,4</td><td>10,0</td></tr>
+        <tr><td>Français — Garçons</td><td>9,2</td><td>8,7</td></tr>
+        <tr><td>Mathématiques — Filles</td><td>11,9</td><td>10,7</td></tr>
+        <tr><td>Mathématiques — Garçons</td><td>12,6</td><td>10,8</td></tr>
+      </tbody>
+    </table></div></div>
+    <div class="data-wrap"><h3>Notes à l'écrit au DNB selon la PCS</h3><div class="table-wrap"><table>
+      <thead><tr><th>PCS</th><th>2022</th><th>2023</th><th>2024</th></tr></thead>
+      <tbody>
+        <tr><td>Cadres supérieurs et enseignants</td><td>11,3</td><td>13,5</td><td>12,6</td></tr>
+        <tr><td>Cadres moyens</td><td>8,8</td><td>12,5</td><td>11,4</td></tr>
+        <tr><td>Employés, artisans, commerçants et agriculteurs</td><td>9,5</td><td>10,9</td><td>10,0</td></tr>
+        <tr><td>Ouvriers et inactifs</td><td>8,6</td><td>10,2</td><td>9,0</td></tr>
+      </tbody>
+    </table></div></div>
+    <div class="data-wrap"><h3>Indicateurs complémentaires DNB</h3><div class="table-wrap"><table>
+      <thead><tr><th>Indicateur</th><th>2022</th><th>2023</th><th>2024</th></tr></thead>
+      <tbody>
+        <tr><td>Valeur ajoutée tx de réussite — Série G</td><td>-7</td><td>-2</td><td>-5</td></tr>
+        <tr><td>Nb moyen de points au socle commun</td><td>277,7</td><td>283,7</td><td>280,3</td></tr>
+        <tr><td>% de présents au DNB — 3ème ordinaire</td><td>95,9%</td><td>96,8%</td><td>93,9%</td></tr>
+        <tr><td>% de présents au DNB — 3ème SEGPA</td><td>60,0%</td><td>0%</td><td>33,3%</td></tr>
+        <tr><td>Taux d'accès 6ème–3ème</td><td>90,7%</td><td>92,6%</td><td>92,1%</td></tr>
+      </tbody>
+    </table></div></div>
+  </div>
+</div><!-- /donnees -->
+
+<!-- LIENS UTILES -->
+<div id="liens" class="section">
+  <div class="section-header">
+    <h2>Liens institutionnels utiles</h2>
+    <div class="divider"></div>
+    <p>Ressources pour l'orientation, les familles et les équipes pédagogiques</p>
+  </div>
+
+  <div class="liens-category">🎯 Orientation et conseil</div>
+  <div class="liens-grid">
+    <a class="lien-card" href="https://www.ac-toulouse.fr/cio-d-albi-121811" target="_blank" rel="noopener">
+      <div class="lien-icon">🏢</div>
+      <div><div class="lien-name">CIO d'Albi</div><div class="lien-desc">Centre d'Information et d'Orientation de secteur — prendre rendez-vous avec un psychologue Psy-EN</div><div class="lien-url">ac-toulouse.fr</div></div>
+    </a>
+    <a class="lien-card" href="https://www.onisep.fr/" target="_blank" rel="noopener">
+      <div class="lien-icon">📚</div>
+      <div><div class="lien-name">Onisep</div><div class="lien-desc">Découvrir les métiers, les formations et les parcours. Quiz d'orientation pour les collégiens</div><div class="lien-url">onisep.fr</div></div>
+    </a>
+    <a class="lien-card" href="https://app.avenirs.onisep.fr/" target="_blank" rel="noopener">
+      <div class="lien-icon">🗺️</div>
+      <div><div class="lien-name">Parcours Avenir</div><div class="lien-desc">Application nationale de suivi du parcours d'orientation de la 6ème à la 3ème</div><div class="lien-url">avenirs.onisep.fr</div></div>
+    </a>
+  </div>
+
+  <div class="liens-category">🔧 Outils et ressources</div>
+  <div class="liens-grid">
+    <a class="lien-card" href="https://www.cordeesdelareussite.fr/" target="_blank" rel="noopener">
+      <div class="lien-icon">🏔️</div>
+      <div><div class="lien-name">Cordées de la Réussite</div><div class="lien-desc">Programme de tutorat entre grandes écoles / universités et collèges REP pour lever l'autocensure scolaire</div><div class="lien-url">cordeesdelareussite.fr</div></div>
+    </a>
+    <a class="lien-card" href="https://www.meformerenregion.fr/collegien/je-cherche-mon-stage" target="_blank" rel="noopener">
+      <div class="lien-icon">🌍</div>
+      <div><div class="lien-name">Me Former en Occitanie — Trouver mon stage</div><div class="lien-desc">Plateforme régionale pour trouver un stage d'observation ou de découverte professionnelle en Occitanie</div><div class="lien-url">meformerenregion.fr</div></div>
+    </a>
+  </div>
+</div>
+
+</main>
+<footer>Collège Louis Pasteur — PPO 2026-2028 — Données issues du fichier PPO_recensement_des_actions.xlsx</footer>
+
+<script>
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showSection(id, el, e) {
+  if(e) e.preventDefault();
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(el) el.classList.add('active');
+}
+function showSub(id, el) {
+  document.querySelectorAll('.sub-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(el) el.classList.add('active');
+}
+
+// ============================================================
+// MOTEUR DE RENDU GRAPHIQUE NATIF (Canvas 2D — zero dépendance)
+// ============================================================
+const C = {
+  navy:'#0d1b3e', blue:'#1a4fa0', accent:'#e8a020',
+  green:'#2e8b57', red:'#c0392b', purple:'#7b4fa0',
+  teal:'#16a085', gray:'#7f8c8d', orange:'#d35400',
+  lblue:'#5b9bd5'
+};
+const PALETTE = [C.blue, C.accent, C.green, C.red, C.purple, C.teal, C.gray, C.orange, C.lblue, '#e74c3c'];
+
+function getCtx(id){ return document.getElementById(id).getContext('2d'); }
+
+function makeLegend(elId, labels, colors){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  el.innerHTML = labels.map((l,i)=>
+    `<div class="legend-item"><div class="legend-dot" style="background:${colors[i%colors.length]}"></div>${l}</div>`
+  ).join('');
+}
+
+// ---- Graphique en barres vertical ----
+function barChart(ctx, labels, datasets, opts={}){
+  const canvas = ctx.canvas;
+  const W = canvas.offsetWidth || 400;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0,0,W,H);
+
+  const PAD = {top:20, right:20, bottom:opts.bottomPad||60, left:opts.leftPad||50};
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  // Calcul max
+  let maxVal = 0;
+  datasets.forEach(ds => ds.data.forEach(v => { if(v!=null && v>maxVal) maxVal=v; }));
+  maxVal = opts.maxVal || (Math.ceil(maxVal*1.15/10)*10);
+  const minVal = opts.minVal || 0;
+  const range = maxVal - minVal;
+
+  // Grille
+  ctx.strokeStyle = '#e8ecf5'; ctx.lineWidth = 1;
+  for(let i=0;i<=5;i++){
+    const y = PAD.top + chartH - (i/5)*chartH;
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+chartW,y); ctx.stroke();
+    ctx.fillStyle='#8899bb'; ctx.font='11px Arial'; ctx.textAlign='right';
+    ctx.fillText((minVal + (range*i/5)).toFixed(range<5?1:0), PAD.left-6, y+4);
+  }
+
+  const nGroups = labels.length;
+  const nSeries = datasets.length;
+  const groupW = chartW / nGroups;
+  const barW = Math.min(groupW*0.7/nSeries, 40);
+  const groupGap = (groupW - barW*nSeries) / 2;
+
+  datasets.forEach((ds, si) => {
+    ctx.fillStyle = ds.color || PALETTE[si];
+    ds.data.forEach((v, gi) => {
+      if(v==null) return;
+      const barH = ((v-minVal)/range)*chartH;
+      const x = PAD.left + gi*groupW + groupGap + si*barW;
+      const y = PAD.top + chartH - barH;
+      ctx.fillRect(x, y, barW-2, barH);
+    });
+  });
+
+  // Labels axe X
+  ctx.fillStyle='#3a4a6a'; ctx.font='11px Arial'; ctx.textAlign='center';
+  labels.forEach((lbl,i)=>{
+    const x = PAD.left + i*groupW + groupW/2;
+    const lines = String(lbl).split('|');
+    lines.forEach((line,li)=> ctx.fillText(line, x, PAD.top+chartH+15+li*13));
+  });
+}
+
+// ---- Graphique en barres horizontal ----
+function hBarChart(ctx, labels, data, opts={}){
+  const canvas = ctx.canvas;
+  const W = canvas.offsetWidth || 400;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0,0,W,H);
+
+  const PAD = {top:10, right:40, bottom:10, left:180};
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+  const n = labels.length;
+  const barH = Math.min(chartH/n*0.65, 28);
+  const gap = chartH/n;
+  const maxVal = Math.max(...data)*1.1;
+
+  labels.forEach((lbl,i)=>{
+    const y = PAD.top + i*gap + gap/2 - barH/2;
+    const bw = (data[i]/maxVal)*chartW;
+    ctx.fillStyle = PALETTE[i%PALETTE.length];
+    ctx.fillRect(PAD.left, y, bw, barH);
+    ctx.fillStyle='#3a4a6a'; ctx.font='11px Arial'; ctx.textAlign='right';
+    ctx.fillText(lbl, PAD.left-8, y+barH/2+4);
+    ctx.fillStyle='#fff'; ctx.textAlign='left';
+    ctx.fillText(data[i], PAD.left+bw+4, y+barH/2+4);
+  });
+}
+
+// ---- Graphique en ligne ----
+function lineChart(ctx, labels, datasets, opts={}){
+  const canvas = ctx.canvas;
+  const W = canvas.offsetWidth || 400;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0,0,W,H);
+
+  const PAD = {top:20, right:20, bottom:40, left:50};
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  let maxVal=0, minVal=999;
+  datasets.forEach(ds=>ds.data.forEach(v=>{if(v!=null){if(v>maxVal)maxVal=v;if(v<minVal)minVal=v;}}));
+  if(opts.maxVal) maxVal=opts.maxVal;
+  if(opts.minVal!=null) minVal=opts.minVal;
+  const range = maxVal-minVal || 1;
+
+  // Grille
+  ctx.strokeStyle='#e8ecf5'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const y = PAD.top + chartH - (i/5)*chartH;
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+chartW,y); ctx.stroke();
+    ctx.fillStyle='#8899bb'; ctx.font='11px Arial'; ctx.textAlign='right';
+    ctx.fillText((minVal+(range*i/5)).toFixed(1), PAD.left-5, y+4);
+  }
+
+  const xStep = chartW/(labels.length-1);
+
+  datasets.forEach((ds,si)=>{
+    const color = ds.color || PALETTE[si];
+    ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.beginPath();
+    let started=false;
+    ds.data.forEach((v,i)=>{
+      if(v==null) return;
+      const x = PAD.left + i*xStep;
+      const y = PAD.top + chartH - ((v-minVal)/range)*chartH;
+      if(!started){ctx.moveTo(x,y); started=true;}
+      else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // Points
+    ds.data.forEach((v,i)=>{
+      if(v==null) return;
+      const x = PAD.left + i*xStep;
+      const y = PAD.top + chartH - ((v-minVal)/range)*chartH;
+      ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fill();
+    });
+  });
+
+  // Labels X
+  ctx.fillStyle='#3a4a6a'; ctx.font='11px Arial'; ctx.textAlign='center';
+  labels.forEach((lbl,i)=>{
+    const x = PAD.left + i*xStep;
+    ctx.fillText(lbl, x, PAD.top+chartH+16);
+  });
+}
+
+// ---- Graphique barre empilée ----
+function stackedBarChart(ctx, labels, datasets, opts={}){
+  const canvas = ctx.canvas;
+  const W = canvas.offsetWidth || 400;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0,0,W,H);
+
+  const PAD = {top:20, right:20, bottom:40, left:50};
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+  const maxVal = opts.maxVal || 100;
+
+  ctx.strokeStyle='#e8ecf5'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const y = PAD.top + chartH - (i/5)*chartH;
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+chartW,y); ctx.stroke();
+    ctx.fillStyle='#8899bb'; ctx.font='11px Arial'; ctx.textAlign='right';
+    ctx.fillText((maxVal*i/5).toFixed(0)+'%', PAD.left-5, y+4);
+  }
+
+  const n = labels.length;
+  const barW = Math.min(chartW/n*0.55, 60);
+  labels.forEach((lbl,i)=>{
+    const x = PAD.left + (i+0.5)*(chartW/n) - barW/2;
+    let cumul=0;
+    datasets.forEach((ds,si)=>{
+      const v = ds.data[i]||0;
+      const bh = (v/maxVal)*chartH;
+      const y = PAD.top + chartH - ((cumul+v)/maxVal)*chartH;
+      ctx.fillStyle = ds.color||PALETTE[si];
+      ctx.fillRect(x, y, barW, bh);
+      cumul+=v;
+    });
+    ctx.fillStyle='#3a4a6a'; ctx.font='11px Arial'; ctx.textAlign='center';
+    ctx.fillText(lbl, PAD.left+(i+0.5)*(chartW/n), PAD.top+chartH+16);
+  });
+}
+
+// ---- Camembert / Donut ----
+function donutChart(ctx, labels, data, colors){
+  const canvas = ctx.canvas;
+  const W = canvas.offsetWidth || 400;
+  const H = canvas.height;
+  canvas.width = W;
+  ctx.clearRect(0,0,W,H);
+
+  const cx = W/2, cy = H/2 - 10;
+  const r = Math.min(W,H)*0.34;
+  const ir = r*0.55;
+  const total = data.reduce((a,b)=>a+b,0);
+  let angle = -Math.PI/2;
+
+  data.forEach((v,i)=>{
+    const sweep = (v/total)*2*Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,angle,angle+sweep);
+    ctx.closePath();
+    ctx.fillStyle = colors[i]||PALETTE[i];
+    ctx.fill();
+    // trou
+    ctx.beginPath();
+    ctx.arc(cx,cy,ir,0,2*Math.PI);
+    ctx.fillStyle='#fff';
+    ctx.fill();
+    angle+=sweep;
+  });
+  // valeur centrale
+  ctx.fillStyle=C.navy; ctx.font='bold 13px Arial'; ctx.textAlign='center';
+  ctx.fillText('2025', cx, cy+5);
+}
+
+// ============================================================
+// DESSIN DES GRAPHIQUES
+// ============================================================
+window.addEventListener('load', ()=>{
+  const YEARS4 = ['2022','2023','2024','2025'];
+  const YEARS3 = ['2022','2023','2024'];
+
+  // === ACCUEIL ===
+  hBarChart(getCtx('cLycees'),
+    ['LP SIDOBRE','LP A. VEAUTE','LPO BORDE B.','LGT LAS CASES','LPO C.PEMILLE','LGT V.HUGO','LP T.LAUTREC','LGT LAPEROUSE','LPO L.RASCOL','STE CECILE','LPO J.JAURES'],
+    [3,4,3,14,69,9,4,3,5,3,2]);
+
+  donutChart(getCtx('cMilieu'),
+    ['Très favorisé','Favorisé','Moyen','Défavorisé'],
+    [9.2,10.4,29.8,50.6],
+    [C.green,C.blue,C.accent,C.red]);
+  makeLegend('legMilieuSocial',
+    ['Très favorisé (9,2%)','Favorisé (10,4%)','Moyen (29,8%)','Défavorisé (50,6%)'],
+    [C.green,C.blue,C.accent,C.red]);
+
+  barChart(getCtx('cPost3Accueil'), YEARS4,
+    [{label:'2nde GT Éduc.',data:[52.3,58.7,51.9,56],color:C.blue},
+     {label:'2nde PRO Éduc.',data:[28.5,21.9,23.8,19.5],color:C.accent},
+     {label:'Redoublement',data:[4.1,7.5,5.5,5],color:C.red},
+     {label:'Apprentissage',data:[5.8,7.5,6.1,null],color:C.green}],
+    {bottomPad:50});
+  makeLegend('legPost3Accueil',
+    ['2nde GT Éduc.','2nde PRO Éduc.','Redoublement','Apprentissage'],
+    [C.blue,C.accent,C.red,C.green]);
+
+  // === LYCEES (onglet données) ===
+  hBarChart(getCtx('cLyceesD'),
+    ['LP SIDOBRE','LP A. VEAUTE','LPO BORDE B.','LGT LAS CASES','LPO C.PEMILLE','LGT V.HUGO','LP T.LAUTREC','LGT LAPEROUSE','LPO L.RASCOL','STE CECILE','LPO J.JAURES'],
+    [3,4,3,14,69,9,4,3,5,3,2]);
+
+  // === PROFIL ===
+  lineChart(getCtx('cFilles'), YEARS4,
+    [{label:'Établissement',data:[48.1,47.2,47.4,48.2],color:C.blue},
+     {label:'Collège hors SEGPA',data:[48.3,47.6,47.5,48.2],color:C.accent},
+     {label:'SEGPA',data:[46,42.9,46.9,48.3],color:C.red}],
+    {minVal:40,maxVal:52});
+  makeLegend('legFilles',['Établissement','Collège hors SEGPA','SEGPA'],[C.blue,C.accent,C.red]);
+
+  lineChart(getCtx('cIPS'), YEARS4,
+    [{label:'Collège hors SEGPA',data:[91.3,93.9,92.9,91.6],color:C.blue},
+     {label:'Entrants en 6ème',data:[92.8,94.3,94.6,87.8],color:C.accent},
+     {label:'SEGPA',data:[73.9,75.3,71.7,70.8],color:C.red},
+     {label:'Ensemble élèves',data:[89.9,92.5,91.1,89.9],color:C.green}],
+    {minVal:60});
+  makeLegend('legIPS',['Collège hors SEGPA','Entrants en 6ème','SEGPA','Ensemble élèves'],[C.blue,C.accent,C.red,C.green]);
+
+  lineChart(getCtx('cMilieuEvol'), YEARS4,
+    [{label:'Très favorisé',data:[11.1,11.6,11.2,9.2],color:C.green},
+     {label:'Favorisé',data:[11.7,11.2,10.2,10.4],color:C.blue},
+     {label:'Moyen',data:[26.7,31.8,30.1,29.8],color:C.accent},
+     {label:'Défavorisé',data:[50.4,45.4,48.5,50.6],color:C.red}],
+    {minVal:0});
+  makeLegend('legMilieuEvol',['Très favorisé','Favorisé','Moyen','Défavorisé'],[C.green,C.blue,C.accent,C.red]);
+
+  // === PARCOURS ===
+  barChart(getCtx('cRedoub'), YEARS4,
+    [{label:'6ème',data:[0,0.7,2.8,4.4],color:C.blue},
+     {label:'5ème',data:[0,0,2.8,0.6],color:C.accent},
+     {label:'4ème',data:[0,1.1,0.6,2.1],color:C.red}]);
+  makeLegend('legRedoub',['6ème','5ème','4ème'],[C.blue,C.accent,C.red]);
+
+  lineChart(getCtx('cPassage'), YEARS4,
+    [{label:'6ème→5ème',data:[94.1,97.3,94.9,93.9],color:C.blue},
+     {label:'5ème→4ème',data:[97.9,100,96.6,98.9],color:C.accent},
+     {label:'4ème→3ème',data:[100,96.8,98.7,96.6],color:C.green}],
+    {minVal:88,maxVal:102});
+  makeLegend('legPassage',['6ème→5ème','5ème→4ème','4ème→3ème'],[C.blue,C.accent,C.green]);
+
+  // === POST-3ème ===
+  barChart(getCtx('cPost3D'), YEARS4,
+    [{label:'2nde GT Éduc.',data:[52.3,58.7,51.9,56],color:C.blue},
+     {label:'2nde GT Agri.',data:[1.7,1.3,0.6,1.3],color:C.teal},
+     {label:'2nde PRO Éduc.',data:[28.5,21.9,23.8,19.5],color:C.accent},
+     {label:'2nde PRO Agri.',data:[4.7,0.6,2.8,5],color:C.purple},
+     {label:'CAP Éduc.',data:[0.6,1.3,1.7,0.6],color:C.red},
+     {label:'Redoublement',data:[4.1,7.5,5.5,5],color:C.gray},
+     {label:'Apprentissage',data:[5.8,7.5,6.1,null],color:C.orange}]);
+  makeLegend('legPost3D',
+    ['2nde GT Éduc.','2nde GT Agri.','2nde PRO Éduc.','2nde PRO Agri.','CAP Éduc.','Redoublement','Apprentissage'],
+    [C.blue,C.teal,C.accent,C.purple,C.red,C.gray,C.orange]);
+
+  barChart(getCtx('cGTSexe'), YEARS4,
+    [{label:'Garçons',data:[48.4,51.8,44.3,48.2],color:C.blue},
+     {label:'Filles',data:[56.8,66.7,60.7,64.5],color:C.accent}]);
+  makeLegend('legGTSexe',['Garçons','Filles'],[C.blue,C.accent]);
+
+  barChart(getCtx('cPROSexe'), YEARS4,
+    [{label:'Garçons',data:[34.1,28.2,32,27.7],color:C.blue},
+     {label:'Filles',data:[22.2,14.7,14.3,10.5],color:C.accent}]);
+  makeLegend('legPROSexe',['Garçons','Filles'],[C.blue,C.accent]);
+
+  // === DNB ===
+  lineChart(getCtx('cDNBTaux'), YEARS3,
+    [{label:'Série G',data:[80.9,87,78.7],color:C.blue},
+     {label:'Série Pro',data:[63.6,28.6,45.5],color:C.accent}],
+    {minVal:0,maxVal:100});
+  makeLegend('legDNBTaux',['Série G','Série Pro'],[C.blue,C.accent]);
+
+  barChart(getCtx('cDNBNotes'), YEARS3,
+    [{label:'Français',data:[9,9.8,9.3],color:C.blue},
+     {label:'Mathématiques',data:[8.6,12.2,10.8],color:C.accent}],
+    {maxVal:20});
+  makeLegend('legDNBNotes',['Français','Mathématiques'],[C.blue,C.accent]);
+
+  stackedBarChart(getCtx('cDNBDistrib'), YEARS3,
+    [{label:'Note < 8',data:[37.7,16.3,27.4],color:C.red},
+     {label:'8 ≤ Note < 10',data:[20.6,20.9,18.3],color:C.accent},
+     {label:'10 ≤ Note < 12',data:[17.7,19,25.7],color:C.blue},
+     {label:'Note ≥ 12',data:[24,43.8,28.6],color:C.green}]);
+  makeLegend('legDNBDistrib',
+    ['Note < 8','8 ≤ Note < 10','10 ≤ Note < 12','Note ≥ 12'],
+    [C.red,C.accent,C.blue,C.green]);
+});
+</script>
+</body>
+</html>
